@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Machine Enigma — Skyland RP</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#000;font-family:'Orbitron',monospace;color:#FFD700;min-height:100vh;overflow:hidden;}
+
+.intro{position:fixed;top:0;left:0;width:100%;height:100%;z-index:100;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;cursor:pointer;}
+.intro.hide{animation:introFade 1s forwards;}
+@keyframes introFade{to{opacity:0;pointer-events:none;}}
+.intro-logo{font-size:13px;font-weight:700;letter-spacing:8px;color:#3a2f0a;text-transform:uppercase;margin-bottom:40px;animation:fadeIn 1s ease 0.3s both;}
+.intro-title{font-size:32px;font-weight:900;letter-spacing:8px;text-transform:uppercase;color:#FFD700;text-shadow:0 0 30px rgba(255,215,0,0.8),0 0 80px rgba(255,215,0,0.3);animation:fadeIn 1s ease 0.8s both;text-align:center;}
+.intro-sub{font-size:12px;font-weight:700;letter-spacing:6px;color:#a07820;margin-top:16px;animation:fadeIn 1s ease 1.2s both;text-align:center;}
+.intro-line{width:0;height:2px;background:linear-gradient(to right,transparent,#FFD700,transparent);margin:32px auto;animation:lineGrow 1.5s ease 1.5s both;}
+@keyframes lineGrow{to{width:300px;}}
+.intro-msg{font-size:11px;font-weight:700;letter-spacing:3px;color:#5a4a1a;text-align:center;animation:blink 1s ease 2.5s infinite both;text-transform:uppercase;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.2;}}
+.intro-gear{font-size:60px;animation:gearSpin 3s linear infinite,fadeIn 1s ease 0.5s both;display:block;text-align:center;margin-bottom:20px;}
+@keyframes gearSpin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+
+.scanlines{position:fixed;top:0;left:0;width:100%;height:100%;z-index:3;pointer-events:none;background:repeating-linear-gradient(to bottom,transparent 0px,transparent 3px,rgba(0,0,0,0.15) 3px,rgba(0,0,0,0.15) 4px);}
+.bg-wrap{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;overflow:hidden;}
+.overlay{position:fixed;top:0;left:0;width:100%;height:100%;z-index:2;background:radial-gradient(ellipse at 50% 50%,rgba(0,0,0,0.3) 0%,rgba(0,0,0,0.75) 60%,rgba(0,0,0,0.95) 100%);pointer-events:none;transition:background 0.5s;}
+.heat-overlay{position:fixed;top:0;left:0;width:100%;height:100%;z-index:2;pointer-events:none;opacity:0;transition:opacity 0.5s;background:radial-gradient(ellipse at center,rgba(255,50,0,0.15) 0%,transparent 70%);}
+
+.main{position:relative;z-index:4;width:100%;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;opacity:0;transition:opacity 0.8s;}
+.main.show{opacity:1;}
+
+.machine-header{text-align:center;margin-bottom:14px;}
+.machine-header h1{font-size:18px;font-weight:900;letter-spacing:6px;color:#FFD700;text-shadow:0 0 16px rgba(255,215,0,0.8),0 0 40px rgba(255,215,0,0.3);}
+.machine-header p{font-size:10px;font-weight:700;letter-spacing:3px;color:#a07820;margin-top:4px;}
+
+.heat-bar-wrap{width:100%;max-width:540px;margin-bottom:10px;}
+.heat-label{display:flex;justify-content:space-between;font-size:10px;font-weight:700;letter-spacing:2px;color:#a07820;margin-bottom:4px;}
+.heat-bar{height:6px;background:#100c00;border-radius:3px;overflow:hidden;border:1px solid #3a2f0a;}
+.heat-fill{height:100%;width:0%;border-radius:3px;transition:width 0.4s,background 0.4s;background:#1d4ed8;}
+
+.timer-wrap{display:flex;align-items:center;gap:10px;width:100%;max-width:540px;margin-bottom:10px;}
+.timer-label{font-size:10px;font-weight:700;letter-spacing:2px;color:#a07820;text-transform:uppercase;white-space:nowrap;}
+.timer-bar{flex:1;height:5px;background:#100c00;border-radius:3px;overflow:hidden;border:1px solid #3a2f0a;}
+.timer-fill{height:100%;width:100%;background:#FFD700;border-radius:3px;transition:width 1s linear,background 0.5s;}
+.timer-val{font-size:15px;font-weight:900;color:#FFD700;min-width:36px;text-align:right;text-shadow:0 0 8px rgba(255,215,0,0.5);}
+
+.lamps{display:flex;justify-content:center;gap:8px;margin-bottom:12px;}
+.lamp{width:14px;height:14px;border-radius:50%;background:#100c00;border:2px solid #3a2f0a;transition:all 0.08s;}
+.lamp.on{background:#FFD700;box-shadow:0 0 12px #FFD700,0 0 28px rgba(255,215,0,0.6);}
+.lamp.green{background:#22c55e;box-shadow:0 0 12px #22c55e,0 0 28px rgba(34,197,94,0.6);border-color:#22c55e;}
+.lamp.red{background:#ef4444;box-shadow:0 0 12px #ef4444;border-color:#ef4444;}
+
+.machine{background:rgba(4,3,0,0.93);border:2px solid #6a5010;border-radius:12px;padding:20px;width:100%;max-width:540px;backdrop-filter:blur(8px);transition:border-color 0.5s,box-shadow 0.5s;}
+.machine.hot{border-color:#ff4400;box-shadow:0 0 30px rgba(255,68,0,0.5);}
+.machine.bugging{animation:shake 0.07s infinite;}
+@keyframes shake{0%{transform:translate(0,0);}25%{transform:translate(-5px,3px);}50%{transform:translate(5px,-3px);}75%{transform:translate(-3px,5px);}100%{transform:translate(0,0);}}
+
+.tabs{display:flex;margin-bottom:16px;border:2px solid #3a2f0a;border-radius:6px;overflow:hidden;}
+.tab{flex:1;padding:10px 2px;background:transparent;color:#6a5a20;font-size:9px;font-weight:900;letter-spacing:1px;text-align:center;cursor:pointer;border:none;font-family:'Orbitron',monospace;transition:all 0.2s;text-transform:uppercase;}
+.tab.active{background:#1a1000;color:#FFD700;text-shadow:0 0 10px rgba(255,215,0,0.6);}
+.tab:hover:not(.active){color:#c8a84b;}
+
+.recipe-panel{display:none;}
+.recipe-panel.active{display:block;}
+.rotors{display:flex;flex-direction:column;gap:10px;margin-bottom:16px;}
+.rotor-row{display:flex;align-items:center;gap:8px;}
+.rotor-label{font-size:9px;font-weight:900;color:#c8a84b;letter-spacing:1px;min-width:58px;text-transform:uppercase;}
+
+.rotor{flex:1;background:#050400;border:2px solid #2a1e00;border-radius:6px;height:50px;overflow:hidden;position:relative;transition:border-color 0.3s;}
+.rotor.hot{border-color:#ff4400;}
+.rotor-inner{transition:transform 0.22s cubic-bezier(0.25,0.46,0.45,0.94);display:flex;flex-direction:column;}
+.rotor-item{height:50px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#2a1e00;text-align:center;padding:0 4px;}
+.rotor-item.selected{color:#FFD700;text-shadow:0 0 8px rgba(255,215,0,0.7);font-size:13px;font-weight:900;}
+.rotor::before{content:'';position:absolute;top:0;left:0;right:0;height:13px;background:linear-gradient(to bottom,#050400,transparent);z-index:2;pointer-events:none;}
+.rotor::after{content:'';position:absolute;bottom:0;left:0;right:0;height:13px;background:linear-gradient(to top,#050400,transparent);z-index:2;pointer-events:none;}
+.rotor-line{position:absolute;top:50%;left:0;right:0;height:2px;background:#2a1e00;transform:translateY(-50%);z-index:1;pointer-events:none;}
+
+.arrows{display:flex;flex-direction:column;gap:3px;}
+.arrow-btn{background:#0a0800;border:2px solid #2a1e00;border-radius:4px;color:#FFD700;width:28px;height:22px;cursor:pointer;font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center;transition:all 0.1s;}
+.arrow-btn:hover{background:#1a1000;border-color:#FFD700;box-shadow:0 0 8px rgba(255,215,0,0.4);}
+.arrow-btn:active{transform:scale(0.88);}
+
+.decode-btn{width:100%;background:transparent;border:2px solid #FFD700;border-radius:6px;padding:13px;color:#FFD700;font-family:'Orbitron',monospace;font-size:12px;font-weight:900;letter-spacing:4px;cursor:pointer;text-transform:uppercase;transition:all 0.2s;margin-bottom:10px;text-shadow:0 0 8px rgba(255,215,0,0.5);}
+.decode-btn:hover{background:#1a1000;box-shadow:0 0 20px rgba(255,215,0,0.3);}
+.decode-btn:active{transform:scale(0.98);}
+
+.result-box{border-radius:6px;padding:12px;font-size:11px;font-weight:700;letter-spacing:1px;text-align:center;display:none;line-height:2;}
+.result-box.success{background:rgba(0,15,0,0.95);border:2px solid #22c55e;color:#22c55e;}
+.result-box.fake{background:rgba(15,12,0,0.95);border:2px solid #FFD700;color:#FFD700;}
+.result-box.error{background:rgba(15,0,0,0.95);border:2px solid #ef4444;color:#ef4444;}
+
+.separator{height:1px;background:#1e1400;margin:12px 0;}
+.hint{font-size:9px;font-weight:700;color:#4a3800;text-align:center;letter-spacing:2px;text-transform:uppercase;}
+
+.bug-screen{position:fixed;top:0;left:0;width:100%;height:100%;z-index:10;background:rgba(0,0,0,0.93);display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;}
+.bug-screen.show{display:flex;}
+.bug-text{font-size:18px;font-weight:900;letter-spacing:4px;color:#ef4444;text-transform:uppercase;animation:blink 0.25s infinite;}
+.bug-sub{font-size:11px;font-weight:700;color:#6a2020;letter-spacing:3px;}
+.bug-gear{font-size:50px;animation:gearSpin 0.5s linear infinite;}
+
+.success-screen{position:fixed;top:0;left:0;width:100%;height:100%;z-index:10;background:rgba(0,5,0,0.97);display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;}
+.success-screen.show{display:flex;}
+.success-title{font-size:14px;font-weight:900;letter-spacing:5px;color:#22c55e;text-transform:uppercase;}
+.success-name{font-size:12px;font-weight:700;color:#4a7a4a;letter-spacing:3px;}
+.success-code{font-size:24px;font-weight:900;letter-spacing:8px;color:#22c55e;text-shadow:0 0 20px rgba(34,197,94,0.9),0 0 50px rgba(34,197,94,0.4);animation:gpulse 1s infinite;}
+@keyframes gpulse{0%,100%{text-shadow:0 0 20px rgba(34,197,94,0.8);}50%{text-shadow:0 0 50px rgba(34,197,94,1),0 0 80px rgba(34,197,94,0.5);}}
+.close-success{background:transparent;border:2px solid #22c55e;border-radius:6px;padding:11px 26px;color:#22c55e;font-family:'Orbitron',monospace;font-size:11px;font-weight:700;letter-spacing:3px;cursor:pointer;text-transform:uppercase;margin-top:6px;}
+.close-success:hover{background:rgba(34,197,94,0.1);}
+</style>
+</head>
+<body>
+
+<div class="intro" id="intro" onclick="skipIntro()">
+  <span class="intro-gear">⚙</span>
+  <div class="intro-logo">Skyland RP — Objets Mastodontes</div>
+  <div class="intro-title">Machine Enigma</div>
+  <div class="intro-sub">Système de déchiffrement — Accès restreint</div>
+  <div class="intro-line"></div>
+  <div class="intro-msg">Cliquez pour accéder à la machine</div>
+</div>
+
+<div class="scanlines"></div>
+<div class="bg-wrap" id="bgWrap"></div>
+<div class="overlay"></div>
+<div class="heat-overlay" id="heatOverlay"></div>
+
+<div class="bug-screen" id="bugScreen">
+  <div class="bug-gear">⚙</div>
+  <div class="bug-text">⚠ ERREUR SYSTÈME ⚠</div>
+  <div class="bug-sub">Recalibration des rotors en cours...</div>
+</div>
+
+<div class="success-screen" id="successScreen">
+  <div class="success-title">✅ Recette décodée</div>
+  <div class="success-name" id="successName"></div>
+  <div class="success-code" id="successCode"></div>
+  <button class="close-success" onclick="closeSuccess()">Fermer</button>
+</div>
+
+<div class="main" id="main">
+  <div class="machine-header">
+    <h1>⚙ Machine Enigma</h1>
+    <p>Skyland RP — Objets Mastodontes</p>
+  </div>
+
+  <div class="heat-bar-wrap">
+    <div class="heat-label"><span>❄ Froid</span><span id="heatPct">0%</span><span>🔥 Chaud</span></div>
+    <div class="heat-bar"><div class="heat-fill" id="heatFill"></div></div>
+  </div>
+
+  <div class="timer-wrap">
+    <span class="timer-label">Bug dans</span>
+    <div class="timer-bar"><div class="timer-fill" id="timerFill"></div></div>
+    <span class="timer-val" id="timerVal">60s</span>
+  </div>
+
+  <div class="lamps">
+    <div class="lamp" id="lamp0"></div><div class="lamp" id="lamp1"></div>
+    <div class="lamp" id="lamp2"></div><div class="lamp" id="lamp3"></div>
+    <div class="lamp" id="lamp4"></div><div class="lamp" id="lamp5"></div>
+    <div class="lamp" id="lamp6"></div><div class="lamp" id="lamp7"></div>
+  </div>
+
+  <div class="machine" id="machine">
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab(0)">🪵 Scierie</button>
+      <button class="tab" onclick="switchTab(1)">🥩 Abattoir</button>
+      <button class="tab" onclick="switchTab(2)">🔩 Cayo</button>
+      <button class="tab" onclick="switchTab(3)">⛏️ Mine</button>
+      <button class="tab" onclick="switchTab(4)">🏭 Fonderie</button>
+    </div>
+    <div class="recipe-panel active" id="panel0"><div class="rotors" id="rotors0"></div><button class="decode-btn" onclick="checkRecipe(0)">⚙ Décoder</button><div class="result-box" id="result0"></div></div>
+    <div class="recipe-panel" id="panel1"><div class="rotors" id="rotors1"></div><button class="decode-btn" onclick="checkRecipe(1)">⚙ Décoder</button><div class="result-box" id="result1"></div></div>
+    <div class="recipe-panel" id="panel2"><div class="rotors" id="rotors2"></div><button class="decode-btn" onclick="checkRecipe(2)">⚙ Décoder</button><div class="result-box" id="result2"></div></div>
+    <div class="recipe-panel" id="panel3"><div class="rotors" id="rotors3"></div><button class="decode-btn" onclick="checkRecipe(3)">⚙ Décoder</button><div class="result-box" id="result3"></div></div>
+    <div class="recipe-panel" id="panel4"><div class="rotors" id="rotors4"></div><button class="decode-btn" onclick="checkRecipe(4)">⚙ Décoder</button><div class="result-box" id="result4"></div></div>
+    <div class="separator"></div>
+    <div class="hint">Tournez les rotors — alignez la bonne combinaison</div>
+  </div>
+</div>
+
+<script>
+const recipes=[
+  {name:'Cheval de Skyland',code:'SKY-4721-CH',timer:60,ingredients:[
+    {label:'Ingr. 1',options:['Bûche','Planche','Charbon','Pierre','Résine','Acier','Écorce'],answer:'Bûche',qty_options:['5 KG','10 KG','15 KG','18 KG','20 KG','25 KG','30 KG'],answer_qty:'18 KG'},
+    {label:'Ingr. 2',options:['Bûche','Planche emballée','Charbon','Pierre','Résine','Sève','Écorce'],answer:'Planche emballée',qty_options:['5 KG','7 KG','10 KG','12 KG','15 KG','18 KG','20 KG'],answer_qty:'10 KG'},
+    {label:'Ingr. 3',options:['Bois coupé','Planche','Charbon','Pierre','Résine','Sève','Écorce'],answer:'Bois coupé',qty_options:['5 KG','8 KG','10 KG','12 KG','15 KG','18 KG','20 KG'],answer_qty:'15 KG'},
+    {label:'Ingr. 4',options:['Bûche','Planche','Charbon','Pierre','Résine','Sève','Écorce'],answer:'Charbon',qty_options:['3 KG','5 KG','7 KG','10 KG','12 KG','15 KG','18 KG'],answer_qty:'7 KG'},
+  ],fakeAnswers:['Pierre','Résine','Acier']},
+  {name:"Couronne d'Os",code:'SKY-8834-CO',timer:60,ingredients:[
+    {label:'Ingr. 1',options:['Os','Steak','Poulet','Cuir','Graisse','Sang','Plume'],answer:'Os',qty_options:['5000','8000','10000','15000','20000','25000','30000'],answer_qty:'20000'},
+    {label:'Ingr. 2',options:['Os','Steak','Poulet abattu','Cuir','Graisse','Sang','Plume'],answer:'Poulet abattu',qty_options:['5000','8000','10000','12000','15000','18000','20000'],answer_qty:'15000'},
+    {label:'Ingr. 3',options:['Os','Steak','Poulet','Cuir','Graisse','Sang','Plume'],answer:'Steak',qty_options:['5000','8000','10000','12000','15000','18000','20000'],answer_qty:'15000'},
+  ],fakeAnswers:['Cuir','Graisse','Sang']},
+  {name:'Golem de Ferraille',code:'SKY-3309-GF',timer:60,ingredients:[
+    {label:'Ingr. 1',options:['Ferraille','Métal','Cuivre','Lingot de fer','Plomb','Titane','Rouille'],answer:'Lingot de fer',qty_options:['1 KG','5 KG','10 KG','15 KG','20 KG','30 KG','40 KG'],answer_qty:'1 KG'},
+    {label:'Ingr. 2',options:['Ferraille','Métal','Cuivre','Acier','Plomb','Titane','Rouille'],answer:'Ferraille',qty_options:['10 KG','20 KG','30 KG','40 KG','49 KG','50 KG','60 KG'],answer_qty:'49 KG'},
+  ],fakeAnswers:['Métal','Cuivre','Acier']},
+  {name:'Artefact de la Mine',code:'SKY-1147-MI',timer:30,ingredients:[
+    {label:'Ingr. 1',options:['Pierre','Fer','Pépite d\'or','Minerai d\'argent','Pépite de cuivre','Charbon','Cristal'],answer:'Pierre',qty_options:['1 KG','2 KG','3 KG','5 KG','8 KG','10 KG','15 KG'],answer_qty:'2 KG'},
+    {label:'Ingr. 2',options:['Pierre','Fer','Pépite d\'or','Minerai d\'argent','Pépite de cuivre','Charbon','Cristal'],answer:'Pépite d\'or',qty_options:['1 KG','2 KG','3 KG','5 KG','8 KG','10 KG','15 KG'],answer_qty:'3 KG'},
+    {label:'Ingr. 3',options:['Pierre','Fer','Pépite d\'or','Minerai d\'argent','Pépite de cuivre','Charbon','Cristal'],answer:'Minerai d\'argent',qty_options:['5 KG','8 KG','10 KG','12 KG','15 KG','18 KG','20 KG'],answer_qty:'10 KG'},
+    {label:'Ingr. 4',options:['Pierre','Fer','Pépite d\'or','Minerai d\'argent','Pépite de cuivre','Charbon','Cristal'],answer:'Pépite de cuivre',qty_options:['10 KG','12 KG','15 KG','18 KG','20 KG','22 KG','25 KG'],answer_qty:'15 KG'},
+    {label:'Ingr. 5',options:['Pierre','Fer','Pépite d\'or','Minerai d\'argent','Pépite de cuivre','Charbon','Cristal'],answer:'Fer',qty_options:['10 KG','15 KG','18 KG','20 KG','22 KG','25 KG','30 KG'],answer_qty:'20 KG'},
+  ],fakeAnswers:['Charbon','Cristal','Pierre']},
+  {name:'Artefact de la Fonderie',code:'SKY-5562-FO',timer:60,ingredients:[
+    {label:'Ingr. 1',options:['Barre d\'argent imparfaite','Lingot d\'or','Lingot de cuivre','Barre d\'or imparfaite','Lingot d\'argent','Ferraille','Charbon'],answer:'Barre d\'argent imparfaite',qty_options:['500','800','1000','1500','2000','3000','5000'],answer_qty:'1000'},
+    {label:'Ingr. 2',options:['Barre d\'argent imparfaite','Lingot d\'or','Lingot de cuivre','Barre d\'or imparfaite','Lingot d\'argent','Ferraille','Charbon'],answer:'Barre d\'or imparfaite',qty_options:['500','800','1000','1500','2000','3000','5000'],answer_qty:'1000'},
+    {label:'Ingr. 3',options:['Barre d\'argent imparfaite','Lingot d\'or','Lingot de cuivre','Barre d\'or imparfaite','Lingot d\'argent','Ferraille','Charbon'],answer:'Lingot de cuivre',qty_options:['5000','8000','10000','15000','20000','25000','30000'],answer_qty:'20000'},
+    {label:'Ingr. 4',options:['Barre d\'argent imparfaite','Lingot d\'or','Lingot de cuivre','Barre d\'or imparfaite','Lingot d\'argent','Ferraille','Charbon'],answer:'Lingot d\'or',qty_options:['5000','8000','10000','12000','15000','18000','20000'],answer_qty:'10000'},
+    {label:'Ingr. 5',options:['Barre d\'argent imparfaite','Lingot d\'or','Lingot de cuivre','Barre d\'or imparfaite','Lingot d\'argent','Ferraille','Charbon'],answer:'Lingot d\'argent',qty_options:['5000','8000','10000','12000','15000','18000','20000'],answer_qty:'10000'},
+  ],fakeAnswers:['Ferraille','Charbon','Lingot de cuivre']},
+];
+
+const state=recipes.map(r=>r.ingredients.map(()=>0));
+const stateQty=recipes.map(r=>r.ingredients.map(()=>0));
+let fakeFound=recipes.map(()=>0);
+let currentTab=0;
+let timerVal=60,timerInterval,heatLevel=0;
+let bgEls=[];
+
+let audioCtx;
+function getAudio(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();return audioCtx;}
+function playClick(h){try{const ctx=getAudio();const buf=ctx.createBuffer(1,ctx.sampleRate*0.03,ctx.sampleRate);const d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*Math.exp(-i/(ctx.sampleRate*0.01));const src=ctx.createBufferSource();src.buffer=buf;const g=ctx.createGain();g.gain.value=0.2+h*0.3;src.connect(g);g.connect(ctx.destination);src.start();}catch(e){}}
+function playSuccess(){try{const ctx=getAudio();[523,659,784,1047,1319].forEach((f,i)=>{const o=ctx.createOscillator();const g=ctx.createGain();o.frequency.value=f;o.type='sine';g.gain.setValueAtTime(0.25,ctx.currentTime+i*0.1);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+i*0.1+0.4);o.connect(g);g.connect(ctx.destination);o.start(ctx.currentTime+i*0.1);o.stop(ctx.currentTime+i*0.1+0.4);});}catch(e){}}
+function playFake(){try{const ctx=getAudio();[440,350].forEach((f,i)=>{const o=ctx.createOscillator();const g=ctx.createGain();o.frequency.value=f;o.type='triangle';g.gain.setValueAtTime(0.2,ctx.currentTime+i*0.15);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+i*0.15+0.3);o.connect(g);g.connect(ctx.destination);o.start(ctx.currentTime+i*0.15);o.stop(ctx.currentTime+i*0.15+0.3);});}catch(e){}}
+function playError(){try{const ctx=getAudio();const o=ctx.createOscillator();const g=ctx.createGain();o.frequency.value=100;o.type='sawtooth';g.gain.setValueAtTime(0.3,ctx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.4);o.connect(g);g.connect(ctx.destination);o.start();o.stop(ctx.currentTime+0.4);}catch(e){}}
+function playBug(){try{const ctx=getAudio();for(let i=0;i<8;i++){const o=ctx.createOscillator();const g=ctx.createGain();o.frequency.value=80+Math.random()*400;o.type='sawtooth';g.gain.setValueAtTime(0.15,ctx.currentTime+i*0.08);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+i*0.08+0.07);o.connect(g);g.connect(ctx.destination);o.start(ctx.currentTime+i*0.08);o.stop(ctx.currentTime+i*0.08+0.07);}}catch(e){}}
+function playIntro(){try{const ctx=getAudio();[220,277,330,440].forEach((f,i)=>{const o=ctx.createOscillator();const g=ctx.createGain();o.frequency.value=f;o.type='sine';g.gain.setValueAtTime(0,ctx.currentTime+i*0.3);g.gain.linearRampToValueAtTime(0.15,ctx.currentTime+i*0.3+0.1);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+i*0.3+0.6);o.connect(g);g.connect(ctx.destination);o.start(ctx.currentTime+i*0.3);o.stop(ctx.currentTime+i*0.3+0.6);});}catch(e){}}
+
+const bgWrap=document.getElementById('bgWrap');
+const rotorPositions=[
+  {size:160,top:-5,left:-5,dur:12,dir:1,delay:0},
+  {size:120,top:5,left:20,dur:8,dir:-1,delay:1},
+  {size:200,top:-8,left:40,dur:18,dir:1,delay:2},
+  {size:140,top:0,left:65,dur:10,dir:-1,delay:0.5},
+  {size:180,top:-10,left:82,dur:15,dir:1,delay:1.5},
+  {size:130,top:60,left:-3,dur:9,dir:-1,delay:0.8},
+  {size:170,top:65,left:20,dur:13,dir:1,delay:2.2},
+  {size:150,top:58,left:45,dur:11,dir:-1,delay:1.1},
+  {size:190,top:62,left:68,dur:16,dir:1,delay:0.3},
+  {size:120,top:70,left:88,dur:7,dir:-1,delay:1.8},
+  {size:100,top:30,left:2,dur:14,dir:1,delay:0.6},
+  {size:110,top:35,left:88,dur:10,dir:-1,delay:2.4},
+  {size:80,top:25,left:50,dur:6,dir:1,delay:1.3},
+  {size:90,top:48,left:30,dur:8,dir:-1,delay:0.9},
+  {size:75,top:42,left:72,dur:9,dir:1,delay:2.0},
+];
+
+const styleTag=document.createElement('style');
+styleTag.textContent=`@keyframes bgSpinCW{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}@keyframes bgSpinCCW{from{transform:rotate(0deg);}to{transform:rotate(-360deg);}}`;
+document.head.appendChild(styleTag);
+
+rotorPositions.forEach((d,idx)=>{
+  const wrap=document.createElement('div');
+  wrap.style.cssText=`position:absolute;width:${d.size}px;height:${d.size}px;top:${d.top}%;left:${d.left}%;animation:bgSpin${d.dir>0?'CW':'CCW'} ${d.dur}s linear ${d.delay}s infinite;`;
+  const col='#c8a84b';
+  const alpha=idx%3===0?0.55:idx%3===1?0.40:0.30;
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('width',d.size);svg.setAttribute('height',d.size);svg.setAttribute('viewBox',`0 0 ${d.size} ${d.size}`);
+  const cx=d.size/2,cy=d.size/2,r=d.size/2-8;
+  [[r,'5',alpha],[r*0.7,'3',alpha*0.7]].forEach(([rad,sw,op])=>{const c=document.createElementNS('http://www.w3.org/2000/svg','circle');c.setAttribute('cx',cx);c.setAttribute('cy',cy);c.setAttribute('r',rad);c.setAttribute('fill','none');c.setAttribute('stroke',col);c.setAttribute('stroke-width',sw);c.setAttribute('opacity',op);svg.appendChild(c);});
+  const hub=document.createElementNS('http://www.w3.org/2000/svg','circle');hub.setAttribute('cx',cx);hub.setAttribute('cy',cy);hub.setAttribute('r',r*0.18);hub.setAttribute('fill',col);hub.setAttribute('opacity',alpha);svg.appendChild(hub);
+  for(let s=0;s<8;s++){const a=(s/8)*Math.PI*2;const sp=document.createElementNS('http://www.w3.org/2000/svg','line');sp.setAttribute('x1',cx+Math.cos(a)*r*0.2);sp.setAttribute('y1',cy+Math.sin(a)*r*0.2);sp.setAttribute('x2',cx+Math.cos(a)*r*0.95);sp.setAttribute('y2',cy+Math.sin(a)*r*0.95);sp.setAttribute('stroke',col);sp.setAttribute('stroke-width','3');sp.setAttribute('opacity',alpha*0.8);svg.appendChild(sp);}
+  for(let t=0;t<20;t++){const a=(t/20)*Math.PI*2;const tooth=document.createElementNS('http://www.w3.org/2000/svg','line');tooth.setAttribute('x1',cx+Math.cos(a)*(r-2));tooth.setAttribute('y1',cy+Math.sin(a)*(r-2));tooth.setAttribute('x2',cx+Math.cos(a)*(r+6));tooth.setAttribute('y2',cy+Math.sin(a)*(r+6));tooth.setAttribute('stroke',col);tooth.setAttribute('stroke-width','4');tooth.setAttribute('opacity',alpha);svg.appendChild(tooth);}
+  wrap.appendChild(svg);bgWrap.appendChild(wrap);bgEls.push(wrap);
+});
+
+function skipIntro(){
+  playIntro();
+  const intro=document.getElementById('intro');
+  intro.classList.add('hide');
+  setTimeout(()=>{
+    intro.style.display='none';
+    document.getElementById('main').classList.add('show');
+    startTimer(recipes[0].timer);
+  },900);
+}
+
+function updateHeat(heat){
+  heatLevel=heat;
+  const fill=document.getElementById('heatFill');
+  const pct=Math.round(heat*100);
+  fill.style.width=pct+'%';
+  document.getElementById('heatPct').textContent=pct+'%';
+  fill.style.background=heat<0.3?'#1d4ed8':heat<0.6?'#f59e0b':'#ef4444';
+  document.getElementById('heatOverlay').style.opacity=heat*0.9;
+  document.getElementById('machine').classList.toggle('hot',heat>0.7);
+  clearInterval(window.lampTimer);
+  if(heat>0.05){
+    const spd=Math.max(60,700-heat*620);
+    window.lampTimer=setInterval(()=>{const idx=Math.floor(Math.random()*8);const l=document.getElementById('lamp'+idx);l.classList.add('on');setTimeout(()=>l.classList.remove('on'),spd*0.4);},spd);
+  }
+  bgEls.forEach((el,i)=>{
+    const base=rotorPositions[i]?rotorPositions[i].dur:10;
+    const newDur=Math.max(1,base*(1-heat*0.7));
+    el.style.animationDuration=newDur.toFixed(1)+'s';
+  });
+}
+
+function calcHeat(p){
+  const recipe=recipes[p];let correct=0,total=0;
+  recipe.ingredients.forEach((ing,i)=>{
+    if(ing.options[state[p][i]]===ing.answer)correct++;
+    if(ing.qty_options[stateQty[p][i]]===ing.answer_qty)correct++;
+    total+=2;
+  });
+  updateHeat(correct/total);
+}
+
+function startTimer(secs){
+  clearInterval(timerInterval);timerVal=secs||60;
+  document.getElementById('timerFill').style.width='100%';
+  timerInterval=setInterval(()=>{
+    timerVal--;
+    document.getElementById('timerVal').textContent=timerVal+'s';
+    const fill=document.getElementById('timerFill');
+    fill.style.width=(timerVal/(recipes[currentTab].timer)*100)+'%';
+    fill.style.background=timerVal<=10?'#ef4444':timerVal<=20?'#f59e0b':'#FFD700';
+    if(timerVal<=0)triggerBug();
+  },1000);
+}
+
+function triggerBug(){
+  playBug();clearInterval(timerInterval);
+  document.getElementById('machine').classList.add('bugging');
+  document.getElementById('bugScreen').classList.add('show');
+  setTimeout(()=>{
+    recipes.forEach((recipe,p)=>{recipe.ingredients.forEach((ing,i)=>{const rN=Math.floor(Math.random()*ing.options.length);const rQ=Math.floor(Math.random()*ing.qty_options.length);state[p][i]=rN;stateQty[p][i]=rQ;const iN=document.getElementById('inner_'+p+'_'+i+'_name');const iQ=document.getElementById('inner_'+p+'_'+i+'_qty');if(iN){iN.style.transform='translateY(-'+(rN*50)+'px)';iN.querySelectorAll('.rotor-item').forEach((el,j)=>el.classList.toggle('selected',j===rN));}if(iQ){iQ.style.transform='translateY(-'+(rQ*50)+'px)';iQ.querySelectorAll('.rotor-item').forEach((el,j)=>el.classList.toggle('selected',j===rQ));}});});
+    document.getElementById('machine').classList.remove('bugging');
+    document.getElementById('bugScreen').classList.remove('show');
+    startTimer(recipes[currentTab].timer);updateHeat(0);
+  },2500);
+}
+
+function buildRotors(p){
+  const recipe=recipes[p];const container=document.getElementById('rotors'+p);container.innerHTML='';
+  recipe.ingredients.forEach((ing,i)=>{
+    const row=document.createElement('div');row.className='rotor-row';
+    const label=document.createElement('div');label.className='rotor-label';label.textContent=ing.label;row.appendChild(label);
+    row.appendChild(mkRotor(ing.options,p,i,'name'));row.appendChild(mkArrows(p,i,'name',ing.options.length));
+    row.appendChild(mkRotor(ing.qty_options,p,i,'qty'));row.appendChild(mkArrows(p,i,'qty',ing.qty_options.length));
+    container.appendChild(row);
+  });
+}
+
+function mkRotor(opts,p,i,type){
+  const rotor=document.createElement('div');rotor.className='rotor';rotor.id='rotor_'+p+'_'+i+'_'+type;
+  const inner=document.createElement('div');inner.className='rotor-inner';inner.id='inner_'+p+'_'+i+'_'+type;
+  opts.forEach((opt,oi)=>{const item=document.createElement('div');item.className='rotor-item'+(oi===0?' selected':'');item.textContent=opt;inner.appendChild(item);});
+  const line=document.createElement('div');line.className='rotor-line';rotor.appendChild(inner);rotor.appendChild(line);return rotor;
+}
+
+function mkArrows(p,i,type,total){
+  const arrows=document.createElement('div');arrows.className='arrows';
+  const up=document.createElement('button');up.className='arrow-btn';up.textContent='▲';up.onclick=()=>spinRotor(p,i,type,-1,total);
+  const down=document.createElement('button');down.className='arrow-btn';down.textContent='▼';down.onclick=()=>spinRotor(p,i,type,1,total);
+  arrows.appendChild(up);arrows.appendChild(down);return arrows;
+}
+
+function spinRotor(p,i,type,dir,total){
+  playClick(heatLevel);
+  if(type==='name'){state[p][i]=(state[p][i]+dir+total)%total;const inner=document.getElementById('inner_'+p+'_'+i+'_name');inner.style.transform='translateY(-'+(state[p][i]*50)+'px)';inner.querySelectorAll('.rotor-item').forEach((el,j)=>el.classList.toggle('selected',j===state[p][i]));}
+  else{const qt=recipes[p].ingredients[i].qty_options.length;stateQty[p][i]=(stateQty[p][i]+dir+qt)%qt;const inner=document.getElementById('inner_'+p+'_'+i+'_qty');inner.style.transform='translateY(-'+(stateQty[p][i]*50)+'px)';inner.querySelectorAll('.rotor-item').forEach((el,j)=>el.classList.toggle('selected',j===stateQty[p][i]));}
+  calcHeat(p);
+}
+
+function checkRecipe(p){
+  const recipe=recipes[p];const result=document.getElementById('result'+p);
+  let allCorrect=true;
+  recipe.ingredients.forEach((ing,i)=>{if(ing.options[state[p][i]]!==ing.answer||ing.qty_options[stateQty[p][i]]!==ing.answer_qty)allCorrect=false;});
+  if(allCorrect){playSuccess();document.getElementById('successName').textContent=recipe.name;document.getElementById('successCode').textContent=recipe.code;document.getElementById('successScreen').classList.add('show');document.querySelectorAll('.lamp').forEach(l=>l.classList.add('green'));clearInterval(timerInterval);return;}
+  const selectedNames=recipe.ingredients.map((ing,i)=>ing.options[state[p][i]]);
+  const isFake=recipe.fakeAnswers.some(fa=>selectedNames.includes(fa));
+  if(isFake&&fakeFound[p]<3){playFake();fakeFound[p]++;result.style.display='block';result.className='result-box fake';result.innerHTML='⚠ SIGNAL DÉTECTÉ...<br>Combinaison enregistrée.<br><em>Mais est-ce vraiment la bonne ?</em>';setTimeout(()=>result.style.display='none',3000);return;}
+  playError();result.style.display='block';result.className='result-box error';result.innerHTML='❌ COMBINAISON INCORRECTE<br>Les rotors ne s\'alignent pas...<br>Cherchez les indices !';
+  document.querySelectorAll('.lamp').forEach(l=>l.classList.add('red'));
+  setTimeout(()=>{document.querySelectorAll('.lamp').forEach(l=>l.classList.remove('red'));result.style.display='none';},2500);
+}
+
+function closeSuccess(){document.getElementById('successScreen').classList.remove('show');}
+
+function switchTab(i){
+  document.querySelectorAll('.tab').forEach((t,idx)=>t.classList.toggle('active',idx===i));
+  document.querySelectorAll('.recipe-panel').forEach((pn,idx)=>pn.classList.toggle('active',idx===i));
+  currentTab=i;calcHeat(i);startTimer(recipes[i].timer);
+}
+
+recipes.forEach((_,i)=>buildRotors(i));
+updateHeat(0);
+</script>
+</body>
+</html>
